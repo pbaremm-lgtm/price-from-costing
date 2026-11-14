@@ -1,0 +1,28 @@
+{
+  "name": "Simple Bake Costing",
+  "short_name": "Bake Price",
+  "description": "Step-by-step costing for home bakers: ingredients, bills, delivery and your time, then the price per piece.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#F5F1FA",
+  "theme_color": "#6B3FA0",
+  "icons": [
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

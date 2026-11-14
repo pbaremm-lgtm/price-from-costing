@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Bake Price">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F5F1FA" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#17121F" media="(prefers-color-scheme: dark)">
+<meta name="description" content="Step-by-step costing for home bakers: ingredients, bills, delivery and your time, then the price per piece.">
+<title>Simple Bake Costing</title>
+<style>
+  /* Layout: one friendly column of numbered steps, a receipt at the end, and a price bar that stays at the bottom of the screen. */
+  :root {
+    --bg: #F5F1FA;
+    --surface: #FFFFFF;
+    --field: #FAF8FD;
+    --ink: #2A1F3D;
+    --muted: #6A5E7E;
+    --line: #E2D9EE;
+    --ube: #6B3FA0;
+    --ube-soft: #EFE7F9;
+    --on-ube: #FFFFFF;
+    --butter: #FFD45C;
+    --butter-ink: #3A2A00;
+    --good: #1E7A4E;
+    --bad: #B42318;
+    --bad-soft: #FDECEA;
+    --font-display: "Fredoka", ui-rounded, "SF Pro Rounded", "Segoe UI", system-ui, sans-serif;
+    --font-body: "Nunito", ui-rounded, "SF Pro Rounded", "Segoe UI", system-ui, -apple-system, sans-serif;
+    --r: 18px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #17121F; --surface: #211A2C; --field: #1B1525; --ink: #EFE9F7; --muted: #A99EBB; --line: #3A2F4A;
+      --ube: #B593E6; --ube-soft: #2E2340; --on-ube: #17121F; --good: #5AD39A; --bad: #FF8F85; --bad-soft: #3A1C1F;
+      color-scheme: dark;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #17121F; --surface: #211A2C; --field: #1B1525; --ink: #EFE9F7; --muted: #A99EBB; --line: #3A2F4A;
+    --ube: #B593E6; --ube-soft: #2E2340; --on-ube: #17121F; --good: #5AD39A; --bad: #FF8F85; --bad-soft: #3A1C1F;
+    color-scheme: dark;
+  }
+
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  body {
+    background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 17px; line-height: 1.5;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 28px 120px;
+  }
+  .wrap { max-width: 620px; margin: 0 auto; display: grid; gap: 18px; }
+
+  .head { display: grid; gap: 6px; }
+  .eyebrow { margin: 0; font-weight: 800; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ube); }
+  h1 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: clamp(30px, 7vw, 40px); line-height: 1.1; text-wrap: balance; }
+  .lede { margin: 0; color: var(--muted); }
+
+  /* product chips */
+  .products { display: flex; gap: 8px; flex-wrap: wrap; }
+  .pchip {
+    font: inherit; display: grid; text-align: left; gap: 0; padding: 8px 14px; border-radius: 14px; cursor: pointer;
+    border: 2px solid var(--line); background: var(--surface); color: var(--ink); max-width: 100%;
+  }
+  .pchip .n { font-weight: 800; font-size: 15px; overflow-wrap: anywhere; }
+  .pchip .p { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .pchip[aria-current="true"] { border-color: var(--ube); background: var(--ube-soft); }
+  .pchip[aria-current="true"] .p { color: var(--ube); font-weight: 700; }
+  .pchip.add { border-style: dashed; color: var(--ube); font-weight: 800; align-content: center; font-size: 15px; }
+  .undo-line { margin: 0; font-size: 15px; color: var(--muted); }
+
+  /* steps */
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 20px; display: grid; gap: 14px; min-width: 0; }
+  .step-head { display: flex; align-items: center; gap: 12px; }
+  .num {
+    flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--ube); color: var(--on-ube); font-family: var(--font-display); font-weight: 600; font-size: 18px;
+  }
+  h2 { margin: 0; font-family: var(--font-display); font-weight: 600; font-size: 22px; line-height: 1.2; }
+  .step-head .sub { display: block; font-family: var(--font-body); font-size: 15px; font-weight: 400; color: var(--muted); }
+  .hint { margin: 0; font-size: 15px; color: var(--muted); }
+  .example { margin: 0; background: var(--butter); color: var(--butter-ink); border-radius: 12px; padding: 10px 14px; font-size: 15px; font-weight: 600; }
+  .example button { color: var(--butter-ink); }
+
+  label.lbl { font-weight: 700; font-size: 15px; }
+  input[type="text"], input[type="number"] {
+    width: 100%; min-width: 0; font: inherit; font-size: 17px; color: var(--ink); background: var(--field);
+    border: 2px solid var(--line); border-radius: 12px; padding: 10px 12px;
+  }
+  input[type="number"] { text-align: right; font-variant-numeric: tabular-nums; -moz-appearance: textfield; appearance: textfield; }
+  input[type="number"]::-webkit-inner-spin-button, input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  input:focus-visible, button:focus-visible { outline: 3px solid var(--ube); outline-offset: 2px; }
+  input:focus { border-color: var(--ube); }
+  ::placeholder { color: var(--muted); opacity: 0.7; }
+
+  .peso { position: relative; display: block; min-width: 0; }
+  .peso::before { content: "₱"; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-weight: 700; pointer-events: none; }
+  .peso input { padding-left: 30px; }
+
+  .field { display: grid; gap: 6px; }
+  .two { display: grid; gap: 12px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+
+  .rows { display: grid; gap: 8px; }
+  .row { display: grid; grid-template-columns: minmax(0, 1fr) 8.5rem 2.5rem; gap: 8px; align-items: center; }
+  .x {
+    width: 2.5rem; height: 2.5rem; border-radius: 10px; border: 0; background: transparent; color: var(--muted);
+    font-size: 22px; line-height: 1; cursor: pointer;
+  }
+  .x:hover { background: var(--bad-soft); color: var(--bad); }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .btn {
+    font: inherit; font-weight: 800; font-size: 15px; border-radius: 12px; padding: 9px 16px; cursor: pointer;
+    border: 2px solid var(--line); background: var(--surface); color: var(--ink);
+  }
+  .btn:hover { border-color: var(--ube); color: var(--ube); }
+  .btn.main { background: var(--ube); border-color: var(--ube); color: var(--on-ube); }
+  .linkbtn { font: inherit; font-weight: 700; color: var(--ube); background: none; border: 0; padding: 0; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+  .linkbtn.danger { color: var(--bad); font-size: 15px; justify-self: start; }
+  .linkbtn:disabled { color: var(--muted); opacity: 0.6; cursor: not-allowed; text-decoration: none; }
+  .subtotal { display: flex; justify-content: space-between; gap: 12px; padding-top: 12px; border-top: 2px dashed var(--line); font-weight: 800; }
+  .subtotal span:last-child { font-variant-numeric: tabular-nums; }
+
+  /* switch */
+  .switch { display: flex; align-items: center; gap: 12px; cursor: pointer; font-weight: 700; }
+  .switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+  .track { flex: none; width: 52px; height: 30px; border-radius: 999px; background: var(--line); position: relative; transition: background 0.15s; }
+  .track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 24px; height: 24px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25); transition: transform 0.15s; }
+  .switch input:checked + .track { background: var(--ube); }
+  .switch input:checked + .track::after { transform: translateX(22px); }
+  .switch input:focus-visible + .track { outline: 3px solid var(--ube); outline-offset: 2px; }
+  .labor-calc { display: grid; gap: 10px; }
+  .labor-eq { margin: 0; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .chip {
+    font: inherit; font-weight: 800; font-size: 16px; padding: 8px 16px; border-radius: 999px; cursor: pointer;
+    border: 2px solid var(--line); background: var(--surface); color: var(--ink);
+  }
+  .chip[aria-pressed="true"] { background: var(--ube); border-color: var(--ube); color: var(--on-ube); }
+  .pct { position: relative; display: block; width: 7.5rem; }
+  .pct input { padding-right: 30px; }
+  .pct .suf { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: var(--muted); font-weight: 700; pointer-events: none; }
+  .sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+  .profit-words { margin: 0; font-size: 15px; color: var(--muted); }
+  .profit-words b { color: var(--ink); }
+
+  /* receipt */
+  .receipt { gap: 0; padding: 0; overflow: hidden; }
+  .receipt-top { padding: 20px 20px 4px; }
+  .receipt dl { margin: 0; padding: 0 20px; display: grid; grid-template-columns: minmax(0, 1fr) auto; }
+  .receipt dt, .receipt dd { margin: 0; padding: 8px 0; border-bottom: 1px dashed var(--line); }
+  .receipt dt { color: var(--muted); }
+  .receipt dd { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; padding-left: 12px; }
+  .receipt dt.sum, .receipt dd.sum { color: var(--ink); font-weight: 800; border-bottom: 2px solid var(--line); }
+  .price-box {
+    margin: 16px 20px 0; background: var(--butter); color: var(--butter-ink); border-radius: 16px; padding: 16px 18px;
+    display: flex; justify-content: space-between; align-items: baseline; gap: 8px 16px; flex-wrap: wrap;
+  }
+  .price-box .t { font-weight: 800; font-size: 17px; }
+  .price-box .v { font-family: var(--font-display); font-weight: 600; font-size: clamp(40px, 11vw, 54px); line-height: 1; font-variant-numeric: tabular-nums; }
+  .round-note { margin: 8px 20px 0; font-size: 14px; color: var(--muted); }
+  .earn { margin: 14px 20px 0; font-size: 16px; }
+  .earn b { font-variant-numeric: tabular-nums; }
+  .pos { color: var(--good); }
+  .warn { margin: 14px 20px 0; padding: 10px 14px; border-radius: 12px; background: var(--bad-soft); color: var(--bad); font-weight: 700; font-size: 15px; }
+  .receipt .actions { padding: 16px 20px 20px; }
+  .status { font-size: 15px; color: var(--muted); }
+  #copy-fallback { margin: 0 20px 20px; width: calc(100% - 40px); min-height: 9em; font: inherit; font-size: 14px; color: var(--ink); background: var(--field); border: 2px solid var(--line); border-radius: 12px; padding: 10px; }
+  .foot { margin: 0; font-size: 14px; color: var(--muted); text-align: center; }
+
+  /* bottom price bar */
+  .pricebar {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; background: var(--ink); color: var(--bg);
+    padding: 12px max(16px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+    transition: transform 0.2s ease;
+  }
+  .pricebar-in { max-width: 620px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .pricebar.is-hidden { transform: translateY(110%); }
+  .pricebar .l { font-size: 14px; opacity: 0.85; overflow-wrap: anywhere; }
+  .pricebar .v { font-family: var(--font-display); font-weight: 600; font-size: 28px; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .pricebar button { font: inherit; font-weight: 800; font-size: 15px; border: 0; border-radius: 12px; padding: 10px 16px; background: var(--butter); color: var(--butter-ink); cursor: pointer; white-space: nowrap; }
+
+  @media (max-width: 440px) {
+    .card { padding: 16px; }
+    .two { grid-template-columns: minmax(0, 1fr); }
+    .row { grid-template-columns: minmax(0, 1fr) 7rem 2.25rem; gap: 6px; }
+    .x { width: 2.25rem; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .pricebar, .track, .track::after { transition: none; }
+  }
+</style>
+<style>
+  :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  body { margin: 0; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="head">
+    <p class="eyebrow">For home bakers</p>
+    <h1>How much should I sell it for?</h1>
+    <p class="lede">Fill in the steps below. Your price shows at the bottom of the screen and updates as you type.</p>
+  </header>
+
+  <nav class="products" id="products" aria-label="My products"></nav>
+  <p class="undo-line" id="undo-line" hidden><span id="undo-msg"></span> <button type="button" class="linkbtn" id="undo">Undo</button></p>
+
+  <p class="example" id="example-note">This is an example so you can see how it works. Tap <button type="button" class="linkbtn" id="start-own">+ New product</button> to start your own.</p>
+
+  <!-- 1 -->
+  <section class="card" aria-labelledby="s1">
+    <div class="step-head"><span class="num" aria-hidden="true">1</span><h2 id="s1">What are you making?</h2></div>
+    <div class="two">
+      <div class="field">
+        <label class="lbl" for="pname">Name</label>
+        <input id="pname" type="text" autocomplete="off" placeholder="e.g. Ube crinkles">
+      </div>
+      <div class="field">
+        <label class="lbl" for="pieces">Pieces per batch</label>
+        <input id="pieces" type="number" inputmode="numeric" min="0" step="any" placeholder="24">
+      </div>
+    </div>
+    <button type="button" class="linkbtn danger" id="delete-product">Delete this product</button>
+  </section>
+
+  <!-- 2 -->
+  <section class="card" aria-labelledby="s2">
+    <div class="step-head"><span class="num" aria-hidden="true">2</span><h2 id="s2">Ingredients<span class="sub">What you spent on each ingredient for one batch.</span></h2></div>
+    <div class="rows" id="ing-list"></div>
+    <div class="actions"><button type="button" class="btn" data-add="ing">+ Add ingredient</button></div>
+    <div class="subtotal"><span>Ingredients total</span><span id="ing-total">₱0.00</span></div>
+  </section>
+
+  <!-- 3 -->
+  <section class="card" aria-labelledby="s3">
+    <div class="step-head"><span class="num" aria-hidden="true">3</span><h2 id="s3">Electricity, water and microwave<span class="sub">What one batch adds to your bills. A good guess is fine.</span></h2></div>
+    <div class="rows" id="ext-list"></div>
+    <div class="actions"><button type="button" class="btn" data-add="ext">+ Add other cost</button></div>
+    <p class="hint">Other costs you can add here: boxes and bags, gas, stickers.</p>
+    <div class="subtotal"><span>Bills total</span><span id="ext-total">₱0.00</span></div>
+  </section>
+
+  <!-- 4 -->
+  <section class="card" aria-labelledby="s4">
+    <div class="step-head"><span class="num" aria-hidden="true">4</span><h2 id="s4">Delivery<span class="sub">Rider fee or gas to deliver this batch.</span></h2></div>
+    <div class="field">
+      <label class="lbl" for="delivery">Delivery cost</label>
+      <span class="peso"><input id="delivery" type="number" inputmode="decimal" min="0" step="any" placeholder="0.00"></span>
+    </div>
+    <p class="hint">Leave it at 0 if the customer pays the rider directly.</p>
+  </section>
+
+  <!-- 5 -->
+  <section class="card" aria-labelledby="s5">
+    <div class="step-head"><span class="num" aria-hidden="true">5</span><h2 id="s5">Your time <span class="sub">Optional</span></h2></div>
+    <label class="switch" for="labor-on"><input type="checkbox" id="labor-on"><span class="track" aria-hidden="true"></span><span>Pay myself for my time</span></label>
+    <p class="hint">If you leave this off, your profit is also your pay. If you turn it on, your time is paid first and the profit is extra money on top.</p>
+    <div class="labor-calc" id="labor-calc" hidden>
+      <div class="two">
+        <div class="field">
+          <label class="lbl" for="hours">Hours you worked</label>
+          <input id="hours" type="number" inputmode="decimal" min="0" step="any" placeholder="3">
+        </div>
+        <div class="field">
+          <label class="lbl" for="rate">Pay per hour</label>
+          <span class="peso"><input id="rate" type="number" inputmode="decimal" min="0" step="any" placeholder="60"></span>
+        </div>
+      </div>
+      <p class="labor-eq" id="labor-eq"></p>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section class="card" aria-labelledby="s6">
+    <div class="step-head"><span class="num" aria-hidden="true">6</span><h2 id="s6">Your profit</h2></div>
+    <div class="chips" id="profit-chips" role="group" aria-label="Profit on top of your cost">
+      <button type="button" class="chip" data-v="20">20%</button>
+      <button type="button" class="chip" data-v="30">30%</button>
+      <button type="button" class="chip" data-v="50">50%</button>
+      <button type="button" class="chip" data-v="100">100%</button>
+      <label class="sr" for="profit">Other profit percent</label>
+      <span class="pct"><input id="profit" type="number" inputmode="decimal" min="0" step="any" placeholder="Other"><span class="suf" aria-hidden="true">%</span></span>
+    </div>
+    <p class="profit-words" id="profit-words"></p>
+    <label class="switch" for="round5"><input type="checkbox" id="round5"><span class="track" aria-hidden="true"></span><span>Round up to the nearest ₱5</span></label>
+  </section>
+
+  <!-- receipt -->
+  <section class="card receipt" id="receipt" aria-labelledby="r-title">
+    <div class="receipt-top step-head"><span class="num" aria-hidden="true">₱</span><h2 id="r-title">Your price</h2></div>
+    <dl>
+      <dt>Ingredients</dt><dd id="r-ing">₱0.00</dd>
+      <dt>Electricity, water, microwave</dt><dd id="r-ext">₱0.00</dd>
+      <dt>Delivery</dt><dd id="r-del">₱0.00</dd>
+      <dt id="r-lab-l">Your time</dt><dd id="r-lab">₱0.00</dd>
+      <dt class="sum" id="r-total-l">Total cost</dt><dd class="sum" id="r-total">₱0.00</dd>
+      <dt class="sum">Cost per piece</dt><dd class="sum" id="r-each">₱0.00</dd>
+      <dt id="r-profit-l">Profit per piece</dt><dd id="r-profit" class="pos">₱0.00</dd>
+    </dl>
+    <div class="price-box" aria-live="polite" aria-atomic="true"><span class="t">Sell each piece for</span><span class="v" id="r-price">—</span></div>
+    <p class="round-note" id="r-round"></p>
+    <p class="warn" id="r-warn" hidden></p>
+    <p class="earn" id="r-earn"></p>
+    <div class="actions">
+      <button type="button" class="btn main" id="copy">Copy my costing</button>
+      <span class="status" id="status" role="status"></span>
+    </div>
+    <textarea id="copy-fallback" readonly hidden aria-label="Costing to copy"></textarea>
+  </section>
+
+  <p class="foot">Everything you type is saved on this phone or computer only.</p>
+</div>
+
+<div class="pricebar" id="pricebar">
+  <div class="pricebar-in">
+    <div><div class="l" id="bar-l">Sell each piece for</div><div class="v" id="bar-v">—</div></div>
+    <button type="button" id="bar-btn">See the breakdown</button>
+  </div>
+</div>
+
+<script>
+/* ---------- the math ---------- */
+function sumRows(rows) {
+  var s = 0;
+  for (var i = 0; i < rows.length; i++) { var v = parseFloat(rows[i].amount); if (v > 0) s += v; }
+  return s;
+}
+function bakeCost(p) {
+  var ing = sumRows(p.ingredients), ext = sumRows(p.extras);
+  var del = Math.max(0, parseFloat(p.delivery) || 0);
+  var lab = p.laborOn ? Math.max(0, (parseFloat(p.hours) || 0) * (parseFloat(p.rate) || 0)) : 0;
+  var total = ing + ext + del + lab;
+  var pcs = parseFloat(p.pieces), piecesOk = pcs > 0;
+  if (!piecesOk) pcs = 1;
+  var each = total / pcs;
+  var pr = parseFloat(p.profit); if (!isFinite(pr) || pr < 0) pr = 0;
+  var target = each * (1 + pr / 100);
+  var price = p.round5 ? Math.ceil(target / 5 - 1e-9) * 5 : Math.ceil(target - 1e-9);   /* always rounds UP */
+  return { ing: ing, ext: ext, del: del, lab: lab, total: total, pcs: pcs, piecesOk: piecesOk, each: each,
+    pr: pr, target: target, price: price, profitEach: price - each, sales: price * pcs, profitAll: price * pcs - total };
+}
+
+/* ---------- the page ---------- */
+(function () {
+  'use strict';
+  var KEY = 'simple-bake-costing-v1';
+  var $ = function (id) { return document.getElementById(id); };
+  function row(n, a) { return { name: n, amount: a == null ? '' : String(a) }; }
+  function example() {
+    return { name: 'Chocolate chip cookies', example: true, pieces: '24',
+      ingredients: [row('Flour', 35), row('Butter', 120), row('Brown sugar', 25), row('Chocolate chips', 110), row('Eggs', 18), row('Vanilla', 10)],
+      extras: [row('Electricity', 15), row('Water', 5), row('Microwave / oven', 10)],
+      delivery: '60', laborOn: false, hours: '', rate: '', profit: '50', round5: false };
+  }
+  function blank(from) {
+    return { name: '', example: false, pieces: '',
+      ingredients: [row(''), row(''), row('')],
+      extras: [row('Electricity'), row('Water'), row('Microwave / oven')],
+      delivery: '', laborOn: false, hours: '', rate: '', profit: from ? from.profit : '50', round5: from ? from.round5 : false };
+  }
+  function clean(p) {
+    var b = blank();
+    p = p || {};
+    var rows = function (a, d) { return Array.isArray(a) && a.length ? a.map(function (r) { return row(String((r && r.name) || ''), (r && r.amount) || ''); }) : d; };
+    return { name: String(p.name || ''), example: !!p.example, pieces: String(p.pieces || ''),
+      ingredients: rows(p.ingredients, b.ingredients), extras: rows(p.extras, b.extras),
+      delivery: String(p.delivery || ''), laborOn: !!p.laborOn, hours: String(p.hours || ''), rate: String(p.rate || ''),
+      profit: p.profit != null ? String(p.profit) : '50', round5: !!p.round5 };
+  }
+  function load() {
+    try {
+      var s = JSON.parse(localStorage.getItem(KEY) || 'null');
+      if (!s || !Array.isArray(s.products) || !s.products.length) return null;
+      var list = s.products.map(clean);
+      return { products: list, current: (s.current >= 0 && s.current < list.length) ? s.current : 0 };
+    } catch (e) { return null; }
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+  var state = load() || { products: [example()], current: 0 };
+  var undoState = null, undoTimer = null;
+  function P() { return state.products[state.current]; }
+
+  function peso(n) { return '₱' + Math.abs(n).toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+  function pesoShort(n) {
+    var whole = Math.abs(n - Math.round(n)) < 0.005;
+    return '₱' + n.toLocaleString('en-PH', whole ? { maximumFractionDigits: 0 } : { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+  function plain(n) { return n.toLocaleString('en-PH', { maximumFractionDigits: 2 }); }
+  function edited() { var p = P(); if (p.example) { p.example = false; $('example-note').hidden = true; } }
+
+  /* ----- products ----- */
+  function renderProducts() {
+    var nav = $('products');
+    nav.textContent = '';
+    state.products.forEach(function (p, i) {
+      var b = document.createElement('button');
+      b.type = 'button'; b.className = 'pchip'; b.setAttribute('data-p', String(i));
+      if (i === state.current) b.setAttribute('aria-current', 'true');
+      var n = document.createElement('span'); n.className = 'n'; n.id = 'pc-n-' + i; n.textContent = p.name || 'New product';
+      var pr = document.createElement('span'); pr.className = 'p'; pr.id = 'pc-p-' + i;
+      b.appendChild(n); b.appendChild(pr); nav.appendChild(b);
+    });
+    var add = document.createElement('button');
+    add.type = 'button'; add.className = 'pchip add'; add.id = 'add-product'; add.textContent = '+ New product';
+    nav.appendChild(add);
+  }
+  function chipPrices() {
+    state.products.forEach(function (p, i) {
+      var el = $('pc-p-' + i); if (!el) return;
+      var r = bakeCost(p);
+      el.textContent = r.total > 0 ? pesoShort(r.price) + ' each' : 'No price yet';
+    });
+  }
+  function newProduct() {
+    state.products.push(blank(P()));
+    state.current = state.products.length - 1;
+    renderAll();
+    $('pname').focus();
+  }
+  $('products').addEventListener('click', function (e) {
+    if (e.target.closest('#add-product')) { newProduct(); return; }
+    var b = e.target.closest('[data-p]'); if (!b) return;
+    var i = +b.getAttribute('data-p'); if (i === state.current) return;
+    state.current = i; renderAll();
+    var again = document.querySelector('[data-p="' + i + '"]'); if (again) again.focus();
+  });
+  $('start-own').addEventListener('click', newProduct);
+  $('delete-product').addEventListener('click', function () {
+    if (state.products.length <= 1) return;
+    undoState = JSON.stringify(state);
+    var name = P().name || 'Product';
+    state.products.splice(state.current, 1);
+    state.current = Math.min(state.current, state.products.length - 1);
+    $('undo-msg').textContent = name + ' deleted.';
+    $('undo-line').hidden = false;
+    clearTimeout(undoTimer);
+    undoTimer = setTimeout(function () { $('undo-line').hidden = true; undoState = null; }, 12000);
+    renderAll();
+  });
+  $('undo').addEventListener('click', function () {
+    if (!undoState) return;
+    try { state = JSON.parse(undoState); } catch (e) { return; }
+    undoState = null; $('undo-line').hidden = true; renderAll();
+  });
+
+  /* ----- cost rows (ingredients and bills) ----- */
+  var LISTS = { ing: 'ingredients', ext: 'extras' };
+  var PLACE = { ing: 'e.g. Flour', ext: 'e.g. Boxes' };
+  function renderList(key) {
+    var box = $(key + '-list'), rows = P()[LISTS[key]];
+    box.textContent = '';
+    rows.forEach(function (r, i) {
+      var d = document.createElement('div');
+      d.className = 'row';
+      d.innerHTML =
+        '<input id="' + key + '-n-' + i + '" type="text" autocomplete="off" placeholder="' + PLACE[key] + '">' +
+        '<span class="peso"><input id="' + key + '-a-' + i + '" type="number" inputmode="decimal" min="0" step="any" placeholder="0.00"></span>' +
+        '<button type="button" class="x" data-rm="' + key + '-' + i + '">×</button>';
+      var n = d.querySelector('#' + key + '-n-' + i), a = d.querySelector('#' + key + '-a-' + i);
+      n.value = r.name; a.value = r.amount;
+      label(key, i, d);
+      box.appendChild(d);
+    });
+  }
+  function label(key, i, scope) {
+    var r = P()[LISTS[key]][i], what = r.name || (key === 'ing' ? 'ingredient ' : 'cost ') + (i + 1);
+    var q = function (s) { return (scope || document).querySelector(s); };
+    q('#' + key + '-n-' + i).setAttribute('aria-label', (key === 'ing' ? 'Ingredient ' : 'Cost ') + (i + 1) + ' name');
+    q('#' + key + '-a-' + i).setAttribute('aria-label', 'Amount for ' + what);
+    q('[data-rm="' + key + '-' + i + '"]').setAttribute('aria-label', 'Remove ' + what);
+  }
+  ['ing', 'ext'].forEach(function (key) {
+    var box = $(key + '-list');
+    box.addEventListener('input', function (e) {
+      var m = new RegExp('^' + key + '-(n|a)-(\\d+)$').exec(e.target.id || ''); if (!m) return;
+      var r = P()[LISTS[key]][+m[2]]; if (!r) return;
+      if (m[1] === 'n') { r.name = e.target.value; label(key, +m[2]); } else { r.amount = e.target.value; }
+      edited(); update();
+    });
+    box.addEventListener('click', function (e) {
+      var b = e.target.closest('[data-rm]'); if (!b) return;
+      var i = +b.getAttribute('data-rm').split('-')[1], rows = P()[LISTS[key]];
+      rows.splice(i, 1);
+      if (!rows.length) rows.push(row(''));
+      edited(); renderList(key);
+      var next = $(key + '-n-' + Math.min(i, rows.length - 1)); if (next) next.focus();
+      update();
+    });
+  });
+  document.querySelectorAll('[data-add]').forEach(function (b) {
+    b.addEventListener('click', function () {
+      var key = b.getAttribute('data-add'), rows = P()[LISTS[key]];
+      rows.push(row(''));
+      edited(); renderList(key);
+      $(key + '-n-' + (rows.length - 1)).focus();
+      update();
+    });
+  });
+
+  /* ----- simple fields ----- */
+  [['pname', 'name'], ['pieces', 'pieces'], ['delivery', 'delivery'], ['hours', 'hours'], ['rate', 'rate'], ['profit', 'profit']].forEach(function (f) {
+    $(f[0]).addEventListener('input', function (e) {
+      P()[f[1]] = e.target.value;
+      if (f[1] === 'name') { var c = $('pc-n-' + state.current); if (c) c.textContent = e.target.value || 'New product'; }
+      edited(); update();
+    });
+  });
+  $('labor-on').addEventListener('change', function (e) { P().laborOn = e.target.checked; $('labor-calc').hidden = !e.target.checked; edited(); update(); });
+  $('round5').addEventListener('change', function (e) { P().round5 = e.target.checked; edited(); update(); });
+  $('profit-chips').addEventListener('click', function (e) {
+    var b = e.target.closest('.chip'); if (!b) return;
+    P().profit = b.getAttribute('data-v'); $('profit').value = ''; edited(); update();
+  });
+
+  function syncFields() {
+    var p = P();
+    $('pname').value = p.name; $('pieces').value = p.pieces; $('delivery').value = p.delivery;
+    $('hours').value = p.hours; $('rate').value = p.rate;
+    $('labor-on').checked = p.laborOn; $('labor-calc').hidden = !p.laborOn;
+    $('round5').checked = p.round5;
+    var preset = ['20', '30', '50', '100'].indexOf(String(parseFloat(p.profit))) !== -1;
+    $('profit').value = preset ? '' : p.profit;
+    $('example-note').hidden = !p.example;
+    $('delete-product').disabled = state.products.length <= 1;
+  }
+  function renderAll() { syncFields(); renderProducts(); renderList('ing'); renderList('ext'); update(); }
+
+  /* ----- results ----- */
+  function update() {
+    var p = P(), r = bakeCost(p);
+    $('ing-total').textContent = peso(r.ing);
+    $('ext-total').textContent = peso(r.ext);
+    $('labor-eq').textContent = plain(parseFloat(p.hours) || 0) + ' hours × ' + peso(parseFloat(p.rate) || 0) + ' = ' + peso(r.lab);
+
+    document.querySelectorAll('#profit-chips .chip').forEach(function (c) {
+      c.setAttribute('aria-pressed', String(parseFloat(c.getAttribute('data-v')) === parseFloat(p.profit)));
+    });
+    $('profit-words').innerHTML = r.pr > 0
+      ? 'You add <b>' + plain(r.pr) + '%</b> of your cost on top. A piece that costs you ₱10 sells for <b>' + pesoShort(Math.round(10 * (1 + r.pr / 100) * 100) / 100) + '</b>.'
+      : 'Pick how much profit you want to add on top of your cost.';
+
+    $('r-ing').textContent = peso(r.ing);
+    $('r-ext').textContent = peso(r.ext);
+    $('r-del').textContent = peso(r.del);
+    $('r-lab-l').hidden = $('r-lab').hidden = !p.laborOn;
+    $('r-lab').textContent = peso(r.lab);
+    $('r-total-l').textContent = 'Total cost' + (r.piecesOk ? ' for ' + plain(r.pcs) + ' pieces' : '');
+    $('r-total').textContent = peso(r.total);
+    $('r-each').textContent = peso(r.each);
+    $('r-profit-l').textContent = 'Profit per piece' + (r.pr > 0 ? ' (' + plain(r.pr) + '%, rounded up)' : '');
+    $('r-profit').textContent = peso(r.profitEach);
+
+    var warn = $('r-warn');
+    if (r.total <= 0) {
+      $('r-price').textContent = '—'; $('bar-v').textContent = '—';
+      $('r-round').textContent = ''; $('r-earn').textContent = '';
+      warn.hidden = false; warn.textContent = 'Put in your ingredient costs to see your price.';
+    } else {
+      $('r-price').textContent = pesoShort(r.price); $('bar-v').textContent = pesoShort(r.price);
+      var rounded = r.price - r.target > 0.004;
+      $('r-round').textContent = rounded ? 'Rounded up from ' + peso(r.target) + ', so you never earn less than planned.' : '';
+      if (!r.piecesOk) { warn.hidden = false; warn.textContent = 'Type how many pieces one batch makes (step 1). For now this is the price for the whole batch.'; }
+      else { warn.hidden = true; }
+      $('r-earn').innerHTML = r.piecesOk && r.pcs !== 1
+        ? 'Sell all ' + plain(r.pcs) + ' pieces and you get <b>' + peso(r.sales) + '</b>. After paying back your costs, you keep <b class="pos">' + peso(r.profitAll) + '</b>' + (p.laborOn && r.lab > 0 ? ', plus the ' + peso(r.lab) + ' for your time.' : '.')
+        : '';
+    }
+    chipPrices();
+    save();
+  }
+
+  /* ----- copy ----- */
+  function costingText() {
+    var p = P(), r = bakeCost(p);
+    if (r.total <= 0) return '';
+    var lines = [(p.name || 'My product') + (r.piecesOk ? ' (' + plain(r.pcs) + ' pieces)' : '')];
+    lines.push('Ingredients: ' + peso(r.ing));
+    p.ingredients.forEach(function (x) { var v = parseFloat(x.amount); if (v > 0) lines.push('  - ' + (x.name || 'Ingredient') + ': ' + peso(v)); });
+    lines.push('Electricity, water, microwave: ' + peso(r.ext));
+    lines.push('Delivery: ' + peso(r.del));
+    if (p.laborOn) lines.push('My time: ' + peso(r.lab));
+    lines.push('Total cost: ' + peso(r.total) + ' (' + peso(r.each) + ' each)');
+    lines.push('Profit: ' + plain(r.pr) + '%');
+    lines.push('Sell each for: ' + pesoShort(r.price));
+    return lines.join('\n');
+  }
+  $('copy').addEventListener('click', function () {
+    var text = costingText(), st = $('status'), fb = $('copy-fallback');
+    if (!text) { st.textContent = 'Add your costs first.'; return; }
+    function fallback() { fb.hidden = false; fb.value = text; fb.focus(); fb.select(); st.textContent = 'Select the text below and copy it.'; }
+    try {
+      navigator.clipboard.writeText(text).then(function () {
+        fb.hidden = true; st.textContent = 'Copied.';
+        setTimeout(function () { if (st.textContent === 'Copied.') st.textContent = ''; }, 2500);
+      }, fallback);
+    } catch (e) { fallback(); }
+  });
+
+  /* ----- bottom bar ----- */
+  $('bar-btn').addEventListener('click', function () {
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    $('receipt').scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
+  });
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (en) { $('pricebar').classList.toggle('is-hidden', en[0].isIntersecting); }, { threshold: 0.15 }).observe($('receipt'));
+  }
+
+  renderAll();
+})();
+</script>
+
+<script>
+  /* keeps a copy on the phone so the app opens with no internet */
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+  }
+</script>
+</body>
+</html>
